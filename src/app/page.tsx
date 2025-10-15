@@ -9,10 +9,7 @@ type TelegramWebApp = {
   expand: () => void;
   themeParams?: { bg_color?: string };
 };
-
-type TelegramWindow = Window & {
-  Telegram?: { WebApp?: TelegramWebApp };
-};
+type TelegramWindow = Window & { Telegram?: { WebApp?: TelegramWebApp } };
 
 type Result = {
   tone: string;
@@ -36,6 +33,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [buddyMsg, setBuddyMsg] = useState<string | null>(null);
 
+  // фиксированная реплика-подкол (не "скачет" при наборе)
+  const [greeting] = useState(
+    () => PERSONA_QUOTES.greeting[Math.floor(Math.random() * PERSONA_QUOTES.greeting.length)]
+  );
+
   // автофокус + восстановление черновика
   useEffect(() => {
     const saved = localStorage.getItem("tonebuddy:text");
@@ -53,7 +55,7 @@ export default function Home() {
     resetCoinsDaily();
   }, []);
 
-  // адаптация под Telegram Mini App — без any
+  // адаптация под Telegram Mini App
   useEffect(() => {
     const w = window as TelegramWindow;
     const tg = w.Telegram?.WebApp;
@@ -73,7 +75,6 @@ export default function Home() {
       return;
     }
 
-    // списываем монетку (5/день)
     if (!trySpendCoin()) {
       setBuddyMsg(
         PERSONA_QUOTES.coinsEmpty[Math.floor(Math.random() * PERSONA_QUOTES.coinsEmpty.length)]
@@ -116,24 +117,20 @@ export default function Home() {
     }
   };
 
-  const greeting =
-    PERSONA_QUOTES.greeting[Math.floor(Math.random() * PERSONA_QUOTES.greeting.length)];
-
   return (
-    <main>
-      <h1>Text to Tone</h1>
-      <p>Вставь текст сообщения — и посмотри, как он звучит 👇</p>
-
-      <h2 style={{ marginBottom: 8 }}>{greeting}</h2>
+    <main className="container">
+      {/* только подкол сверху */}
+      <h1 className="greeting">{greeting}</h1>
 
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Например: Срочно пришлите отчёт. Вы опять затянули сроки."
+        placeholder='Например: «Срочно пришлите отчёт. Вы опять затянули сроки.»'
+        aria-label="Текст для анализа тона"
       />
 
-      <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+      <div className="controls">
         <button onClick={analyze} disabled={!text.trim() || loading}>
           {loading ? "Анализ..." : "Проверить тон"}
         </button>
@@ -150,50 +147,36 @@ export default function Home() {
         </button>
       </div>
 
-      {buddyMsg && <p style={{ marginTop: 12, opacity: 0.85 }}>{buddyMsg}</p>}
+      {buddyMsg && <p className="msg">{buddyMsg}</p>}
+      <p className="hint">Осталось анализов сегодня: {getCoins()}</p>
 
-      <p style={{ marginTop: 6, opacity: 0.6 }}>
-        Осталось анализов сегодня: {getCoins()}
-      </p>
-
-      {error && <p style={{ color: "red", marginTop: 16 }}>{error}</p>}
+      {error && <p className="error">{error}</p>}
 
       {result && (
-        <section style={{ marginTop: 32, width: "100%" }}>
-          <h2>Результат</h2>
-          <div style={{ marginTop: 8 }}>
+        <section className="result">
+          <div className="badges">
             <span className={`badge tone ${result.tone}`}>Тон: {result.tone}</span>
             <span className="badge">Формальность: {result.formality}</span>
             <span className="badge">Чёткость: {result.clarity}</span>
           </div>
 
           {result.issues?.length > 0 && (
-            <p style={{ marginTop: 12 }}>
-              <b>Проблемы:</b> {result.issues.join(", ")}
-            </p>
+            <p className="issues"><b>Проблемы:</b> {result.issues.join(", ")}</p>
           )}
 
           <div className="card">
             <h3>Почему так</h3>
-            <ul>
-              {result.explanations.map((x, i) => (
-                <li key={i}>{x}</li>
-              ))}
-            </ul>
+            <ul>{result.explanations.map((x, i) => <li key={i}>{x}</li>)}</ul>
           </div>
 
           <div className="card">
             <h3>Что улучшить</h3>
-            <ul>
-              {result.suggestions.map((x, i) => (
-                <li key={i}>{x}</li>
-              ))}
-            </ul>
+            <ul>{result.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul>
           </div>
 
           <div className="card">
             <h3>Варианты перефраза</h3>
-            <div style={{ display: "grid", gap: 8 }}>
+            <div className="rewrites">
               <Rewrite title="Мягче" text={result.rewrites.softer} />
               <Rewrite title="Короче" text={result.rewrites.shorter} />
               <Rewrite title="Дружелюбнее" text={result.rewrites.friendlier} />
@@ -211,30 +194,16 @@ function Rewrite({ title, text }: { title: string; text: string }) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      // no-op
+      /* noop */
     }
   };
   return (
-    <div
-      style={{
-        border: "1px solid #333",
-        borderRadius: 8,
-        padding: 12,
-        background: "#111",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
+    <div className="rewrite">
+      <div className="rewriteHead">
         <b>{title}</b>
         <button onClick={copy}>📋 Копировать</button>
       </div>
-      <p style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{text}</p>
+      <p className="rewriteText">{text}</p>
     </div>
   );
 }
