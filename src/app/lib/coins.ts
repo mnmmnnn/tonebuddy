@@ -11,15 +11,15 @@ export function resetCoinsDaily() {
   const last = localStorage.getItem(RESET_KEY);
   if (last !== today) {
     localStorage.setItem(RESET_KEY, today);
-    localStorage.setItem(COINS_KEY, "5"); // 5 бесплатных анализов в день
+    localStorage.setItem(COINS_KEY, "10"); // 5 бесплатных анализов в день
   }
 }
 
 // Получаем количество оставшихся монет
 export function getCoins(): number {
-  if (!isBrowser()) return 5; // на сервере всегда возвращаем дефолт
+  if (!isBrowser()) return 10; // на сервере всегда возвращаем дефолт
   const v = localStorage.getItem(COINS_KEY);
-  return v ? parseInt(v) : 5;
+  return v ? parseInt(v) : 10;
 }
 
 // Пробуем потратить одну монету, возвращаем true если получилось
