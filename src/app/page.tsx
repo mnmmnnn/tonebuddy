@@ -14,7 +14,6 @@ type TelegramWindow = Window & {
   Telegram?: { WebApp?: TelegramWebApp };
 };
 
-
 type Result = {
   tone: string;
   formality: string;
@@ -54,28 +53,22 @@ export default function Home() {
     resetCoinsDaily();
   }, []);
 
-  // адаптация под Telegram Mini App (безопасно — работает только внутри телеги)
+  // адаптация под Telegram Mini App — без any
   useEffect(() => {
     const w = window as TelegramWindow;
     const tg = w.Telegram?.WebApp;
     if (!tg) return;
-  
     tg.ready();
     tg.expand();
-  
     const bg = tg.themeParams?.bg_color;
     if (bg) document.body.style.background = bg;
   }, []);
-  
-  
 
   const analyze = async () => {
     const msg = text.trim();
     if (!msg) {
       setBuddyMsg(
-        PERSONA_QUOTES.noText[
-          Math.floor(Math.random() * PERSONA_QUOTES.noText.length)
-        ]
+        PERSONA_QUOTES.noText[Math.floor(Math.random() * PERSONA_QUOTES.noText.length)]
       );
       return;
     }
@@ -83,9 +76,7 @@ export default function Home() {
     // списываем монетку (5/день)
     if (!trySpendCoin()) {
       setBuddyMsg(
-        PERSONA_QUOTES.coinsEmpty[
-          Math.floor(Math.random() * PERSONA_QUOTES.coinsEmpty.length)
-        ]
+        PERSONA_QUOTES.coinsEmpty[Math.floor(Math.random() * PERSONA_QUOTES.coinsEmpty.length)]
       );
       return;
     }
@@ -125,11 +116,8 @@ export default function Home() {
     }
   };
 
-  // приветствие-подкол
   const greeting =
-    PERSONA_QUOTES.greeting[
-      Math.floor(Math.random() * PERSONA_QUOTES.greeting.length)
-    ];
+    PERSONA_QUOTES.greeting[Math.floor(Math.random() * PERSONA_QUOTES.greeting.length)];
 
   return (
     <main>
@@ -162,9 +150,8 @@ export default function Home() {
         </button>
       </div>
 
-      {buddyMsg && (
-        <p style={{ marginTop: 12, opacity: 0.85 }}>{buddyMsg}</p>
-      )}
+      {buddyMsg && <p style={{ marginTop: 12, opacity: 0.85 }}>{buddyMsg}</p>}
+
       <p style={{ marginTop: 6, opacity: 0.6 }}>
         Осталось анализов сегодня: {getCoins()}
       </p>
