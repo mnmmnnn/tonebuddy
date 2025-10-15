@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import { PERSONA_QUOTES } from "./lib/persona";
 import { resetCoinsDaily, getCoins, trySpendCoin } from "./lib/coins";
 
+type TelegramWebApp = {
+  ready: () => void;
+  expand: () => void;
+  themeParams?: { bg_color?: string };
+};
+
+type TelegramWindow = Window & {
+  Telegram?: { WebApp?: TelegramWebApp };
+};
+
+
 type Result = {
   tone: string;
   formality: string;
@@ -45,8 +56,7 @@ export default function Home() {
 
   // адаптация под Telegram Mini App (безопасно — работает только внутри телеги)
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as unknown as { Telegram?: any };
+    const w = window as TelegramWindow;
     const tg = w.Telegram?.WebApp;
     if (!tg) return;
   
@@ -56,6 +66,7 @@ export default function Home() {
     const bg = tg.themeParams?.bg_color;
     if (bg) document.body.style.background = bg;
   }, []);
+  
   
 
   const analyze = async () => {
