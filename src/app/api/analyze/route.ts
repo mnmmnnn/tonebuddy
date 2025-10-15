@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SYSTEM_PROMPT, buildUserPrompt } from "../lib/prompt";
+import { SYSTEM_PROMPT, buildUserPrompt } from "../../lib/prompt";
 
 export const runtime = "edge";
 
