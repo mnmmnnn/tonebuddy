@@ -45,15 +45,18 @@ export default function Home() {
 
   // адаптация под Telegram Mini App (безопасно — работает только внутри телеги)
   useEffect(() => {
-    const w = window as any;
-    if (w?.Telegram?.WebApp) {
-      const tg = w.Telegram.WebApp;
-      tg.ready();
-      tg.expand();
-      const bg = tg.themeParams?.bg_color;
-      if (bg) document.body.style.background = bg;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as unknown as { Telegram?: any };
+    const tg = w.Telegram?.WebApp;
+    if (!tg) return;
+  
+    tg.ready();
+    tg.expand();
+  
+    const bg = tg.themeParams?.bg_color;
+    if (bg) document.body.style.background = bg;
   }, []);
+  
 
   const analyze = async () => {
     const msg = text.trim();
