@@ -32,30 +32,32 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buddyMsg, setBuddyMsg] = useState<string | null>(null);
+  const [coins, setCoins] = useState(0);
 
-  // фиксированная реплика-подкол (не "скачет" при наборе)
+  // Фиксированная реплика-подкол (не "скачет" при наборе)
   const [greeting] = useState(
     () => PERSONA_QUOTES.greeting[Math.floor(Math.random() * PERSONA_QUOTES.greeting.length)]
   );
 
-  // автофокус + восстановление черновика
+  // Автофокус + восстановление черновика
   useEffect(() => {
     const saved = localStorage.getItem("tonebuddy:text");
     if (saved) setText(saved);
     document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
   }, []);
 
-  // сохраняем черновик
+  // Сохраняем черновик
   useEffect(() => {
     localStorage.setItem("tonebuddy:text", text);
   }, [text]);
 
-  // дневной лимит монет
+  // Дневной лимит монет
   useEffect(() => {
     resetCoinsDaily();
+    setCoins(getCoins());
   }, []);
 
-  // адаптация под Telegram Mini App
+  // Адаптация под Telegram Mini App
   useEffect(() => {
     const w = window as TelegramWindow;
     const tg = w.Telegram?.WebApp;
@@ -85,6 +87,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setBuddyMsg(null);
 
     try {
       const r = await fetch("/api/analyze", {
@@ -95,6 +98,7 @@ export default function Home() {
       const json = await r.json();
       if (!r.ok) throw new Error(json.error || "Ошибка запроса");
       setResult(json as Result);
+      setCoins(getCoins());
 
       setBuddyMsg(
         PERSONA_QUOTES.afterAnalyze[
@@ -117,70 +121,110 @@ export default function Home() {
     }
   };
 
+  const clearAll = () => {
+    setText("");
+    setResult(null);
+    setError(null);
+    setBuddyMsg(null);
+    localStorage.removeItem("tonebuddy:text");
+  };
+
+  const charCount = text.length;
+  const hasText = text.trim().length > 0;
+
   return (
     <main className="container">
-      {/* только подкол сверху */}
       <h1 className="greeting">{greeting}</h1>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder='Например: «Срочно пришлите отчёт. Вы опять затянули сроки.»'
-        aria-label="Текст для анализа тона"
-      />
+      <div style={{ position: "relative" }}>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder='Например: «Срочно пришлите отчёт. Вы опять затянули сроки.»'
+          aria-label="Текст для анализа тона"
+          maxLength={2000}
+        />
+        {hasText && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: "12px",
+              right: "16px",
+              fontSize: "12px",
+              color: charCount > 1800 ? "#f59e0b" : "#6b6d7e",
+              fontWeight: 600,
+            }}
+          >
+            {charCount}/2000
+          </div>
+        )}
+      </div>
 
       <div className="controls">
-        <button onClick={analyze} disabled={!text.trim() || loading}>
-          {loading ? "Анализ..." : "Проверить тон"}
+        <button onClick={analyze} disabled={!hasText || loading}>
+          {loading ? "⏳ Анализирую..." : "✨ Проверить тон"}
         </button>
-        <button
-          onClick={() => {
-            setText("");
-            setResult(null);
-            setError(null);
-            setBuddyMsg(null);
-            localStorage.removeItem("tonebuddy:text");
-          }}
-        >
-          Очистить
+        <button onClick={clearAll} disabled={loading}>
+          🗑️ Очистить
         </button>
       </div>
 
-      {buddyMsg && <p className="msg">{buddyMsg}</p>}
-      <p className="hint">Осталось анализов сегодня: {getCoins()}</p>
+      <p className="hint">
+        <span>💎</span>
+        <span>
+          Осталось проверок сегодня: <strong style={{ color: coins === 0 ? "#ef4444" : "#10b981" }}>{coins}</strong>
+        </span>
+      </p>
 
-      {error && <p className="error">{error}</p>}
+      {buddyMsg && <div className="msg">{buddyMsg}</div>}
+      {error && <div className="error">⚠️ {error}</div>}
 
       {result && (
         <section className="result">
           <div className="badges">
-            <span className={`badge tone ${result.tone}`}>Тон: {result.tone}</span>
-            <span className="badge">Формальность: {result.formality}</span>
-            <span className="badge">Чёткость: {result.clarity}</span>
+            <span className={`badge tone ${result.tone}`}>
+              {getToneIcon(result.tone)} {getToneLabel(result.tone)}
+            </span>
+            <span className="badge">
+              📝 {result.formality}
+            </span>
+            <span className="badge">
+              🎯 {result.clarity}
+            </span>
           </div>
 
           {result.issues?.length > 0 && (
-            <p className="issues"><b>Проблемы:</b> {result.issues.join(", ")}</p>
+            <div className="issues">
+              <b>⚠️ Проблемы:</b> {result.issues.join(", ")}
+            </div>
           )}
 
           <div className="card">
-            <h3>Почему так</h3>
-            <ul>{result.explanations.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <h3>💡 Почему так</h3>
+            <ul>
+              {result.explanations.map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+            </ul>
           </div>
 
           <div className="card">
-            <h3>Что улучшить</h3>
-            <ul>{result.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <h3>🎨 Что улучшить</h3>
+            <ul>
+              {result.suggestions.map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+            </ul>
           </div>
 
           <div className="card">
-            <h3>Варианты перефраза</h3>
+            <h3>✏️ Варианты перефраза</h3>
             <div className="rewrites">
-              <Rewrite title="Мягче" text={result.rewrites.softer} />
-              <Rewrite title="Короче" text={result.rewrites.shorter} />
-              <Rewrite title="Дружелюбнее" text={result.rewrites.friendlier} />
-              <Rewrite title="Формальнее" text={result.rewrites.more_formal} />
+              <Rewrite title="🌸 Мягче" text={result.rewrites.softer} />
+              <Rewrite title="⚡ Короче" text={result.rewrites.shorter} />
+              <Rewrite title="😊 Дружелюбнее" text={result.rewrites.friendlier} />
+              <Rewrite title="🎩 Формальнее" text={result.rewrites.more_formal} />
             </div>
           </div>
         </section>
@@ -190,20 +234,49 @@ export default function Home() {
 }
 
 function Rewrite({ title, text }: { title: string; text: string }) {
+  const [copied, setCopied] = useState(false);
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       /* noop */
     }
   };
+
   return (
     <div className="rewrite">
       <div className="rewriteHead">
         <b>{title}</b>
-        <button onClick={copy}>📋 Копировать</button>
+        <button onClick={copy}>
+          {copied ? "✓ Скопировано" : "📋 Копировать"}
+        </button>
       </div>
       <p className="rewriteText">{text}</p>
     </div>
   );
+}
+
+function getToneIcon(tone: string): string {
+  const icons: Record<string, string> = {
+    aggressive: "🔥",
+    neutral: "😐",
+    cold: "❄️",
+    friendly: "😊",
+    passive_aggressive: "😏",
+  };
+  return icons[tone] || "💬";
+}
+
+function getToneLabel(tone: string): string {
+  const labels: Record<string, string> = {
+    aggressive: "Агрессивный",
+    neutral: "Нейтральный",
+    cold: "Холодный",
+    friendly: "Дружелюбный",
+    passive_aggressive: "Пассивно-агрессивный",
+  };
+  return labels[tone] || tone;
 }
